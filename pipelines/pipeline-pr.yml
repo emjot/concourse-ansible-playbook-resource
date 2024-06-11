@@ -1,0 +1,138 @@
+# Pipeline for PRs
+resource_types:
+  - name: pull-request
+    type: docker-image
+    source:
+      repository: teliaoss/github-pr-resource
+
+resources:
+  - name: repo-pr
+    type: pull-request
+    icon: github
+    source:
+      repository: emjot/concourse-ansible-playbook-resource
+      access_token: ((ci-gh-pr-token))
+      ignore_paths:
+        - "*.md"
+        - "pipelines/*.yml"
+
+jobs:
+  - name: build-and-test
+    plan:
+      - get: repo-pr
+        trigger: true
+      - in_parallel:
+        - put: repo-pr
+          params: { path: repo-pr, context: 'build', status: pending }
+        - put: repo-pr
+          params: { path: repo-pr, context: 'test', status: pending }
+
+      - task: build-for-version
+        privileged: true # oci-build-task must run in a privileged container
+        config:
+          platform: linux
+          image_resource:
+            type: registry-image
+            source:
+              repository: concourse/oci-build-task
+          inputs:
+            - name: repo-pr
+          outputs:
+            - name: image
+          caches:
+            - path: cache
+          params:
+            CONTEXT: repo-pr/
+            TARGET: print_latest_ansible_version
+            UNPACK_ROOTFS: true
+          run:
+            path: build
+        output_mapping:
+          image: version-image
+      - task: latest-ansible-version
+        image: version-image
+        config:
+          platform: linux
+          outputs:
+            - name: latest-ansible-version
+          run:
+            path: sh
+            args:
+            - -exc
+            - |
+              /tools/print_latest_ansible_version.sh > latest-ansible-version/version
+              ls -la latest-ansible-version
+              cat latest-ansible-version/version | cut -d '.' -f 1 > latest-ansible-version/major
+              cat latest-ansible-version/version
+              cat latest-ansible-version/major
+      - in_parallel:
+        - load_var: ansible-version
+          file: latest-ansible-version/version
+        - load_var: ansible-major
+          file: latest-ansible-version/major
+
+      - task: build-image
+        privileged: true
+        params:
+          BUILD_ARG_ANSIBLE_VERSION: ((.:ansible-version))
+          TARGET: main
+          UNPACK_ROOTFS: true
+        config:
+          platform: linux
+          image_resource:
+            type: registry-image
+            source:
+              repository: concourse/oci-build-task
+          inputs:
+            - name: repo-pr
+              path: .
+          outputs:
+            - name: image
+          caches:
+            - path: cache
+          run:
+            path: build
+        on_success:
+          put: repo-pr
+          params: { path: repo-pr, context: 'build', status: success }
+        on_failure:
+          put: repo-pr
+          params: { path: repo-pr, context: 'build', status: failure }
+        on_error:
+          put: repo-pr
+          params: { path: repo-pr, context: 'build', status: error }
+        on_abort:
+          put: repo-pr
+          params: { path: repo-pr, context: 'build', status: error }
+
+      - task: test
+        privileged: true
+        params:
+          BUILD_ARG_ANSIBLE_VERSION: ((.:ansible-version))
+          TARGET: testing
+          UNPACK_ROOTFS: false
+        config:
+          platform: linux
+          image_resource:
+            type: registry-image
+            source:
+              repository: concourse/oci-build-task
+          inputs:
+            - name: repo-pr
+              path: .
+          caches:
+            - path: cache
+          run:
+            path: build
+        on_success:
+          put: repo-pr
+          params: { path: repo-pr, context: 'test', status: success }
+        on_failure:
+          put: repo-pr
+          params: { path: repo-pr, context: 'test', status: failure }
+        on_error:
+          put: repo-pr
+          params: { path: repo-pr, context: 'test', status: error }
+        on_abort:
+          put: repo-pr
+          params: { path: repo-pr, context: 'test', status: error }
