@@ -1,0 +1,244 @@
+# This pipeline publishes and keeps the concourse-ansible-playbook-resource image up to date
+resource_types:
+  - name: cogito
+    type: registry-image
+    check_every: 1h
+    source:
+      repository: pix4d/cogito
+
+resources:
+  - name: github-status
+    type: cogito
+    icon: github
+    check_every: 1h
+    source:
+      context_prefix: 'concourse'
+      owner: emjot
+      repo: concourse-ansible-playbook-resource
+      access_token: ((ci-gh-status-token))
+
+  - name: repo
+    type: git
+    icon: git
+    check_every: 30m
+    source:
+      uri: https://github.com/emjot/concourse-ansible-playbook-resource
+      ignore_paths: [pipelines/pipeline.yml, pipelines/pipeline-pr.yml, README.md]
+
+  - name: weekly-rebuild
+    type: time
+    icon: clock
+    source:
+      days:
+        - Thursday
+      start: 3:00 AM
+      stop: 3:30 AM
+      location: Europe/Berlin
+      initial_version: true
+
+  - name: concourse-ansible-playbook-resource
+    icon: docker
+    type: registry-image
+    source:
+      repository: emjotde/concourse-ansible-playbook-resource
+      tag: latest
+      username: ((docker.username))
+      password: ((docker.password))
+
+jobs:
+  - name: build-and-publish
+    plan:
+      - in_parallel:
+        - get: repo
+          trigger: true
+        - get: weekly-rebuild
+          trigger: true
+      - in_parallel:
+        - put: github-status
+          no_get: true
+          inputs: [ repo ]
+          params: { context: 'build', state: pending }
+        - put: github-status
+          no_get: true
+          inputs: [ repo ]
+          params: { context: 'test', state: pending }
+        - put: github-status
+          no_get: true
+          inputs: [ repo ]
+          params: { context: 'publish', state: pending }
+
+      - task: build-for-version
+        privileged: true # oci-build-task must run in a privileged container
+        config:
+          platform: linux
+          image_resource:
+            type: registry-image
+            source:
+              repository: concourse/oci-build-task
+          inputs:
+            - name: repo
+          outputs:
+            - name: image
+          caches:
+            - path: cache
+          params:
+            CONTEXT: repo/
+            TARGET: print_latest_ansible_version
+            UNPACK_ROOTFS: true
+          run:
+            path: build
+        output_mapping:
+          image: version-image
+      - task: latest-ansible-version
+        image: version-image
+        config:
+          platform: linux
+          outputs:
+            - name: latest-ansible-version
+          run:
+            path: sh
+            args:
+            - -exc
+            - |
+              /tools/print_latest_ansible_version.sh > latest-ansible-version/version
+              ls -la latest-ansible-version
+              cat latest-ansible-version/version | cut -d '.' -f 1 > latest-ansible-version/major
+              cat latest-ansible-version/version
+              cat latest-ansible-version/major
+      - in_parallel:
+        - load_var: ansible-version
+          file: latest-ansible-version/version
+        - load_var: ansible-major
+          file: latest-ansible-version/major
+        - load_var: repo-version
+          file: repo/.git/describe_ref
+
+      - task: build-image
+        privileged: true
+        params:
+          BUILD_ARG_ANSIBLE_VERSION: ((.:ansible-version))
+          TARGET: main
+          UNPACK_ROOTFS: true
+        config:
+          platform: linux
+          image_resource:
+            type: registry-image
+            source:
+              repository: concourse/oci-build-task
+          inputs:
+            - name: repo
+              path: .
+          outputs:
+            - name: image
+          caches:
+            - path: cache
+          run:
+            path: build
+        on_success:
+          put: github-status
+          no_get: true
+          inputs: [ repo ]
+          params: { context: 'build', state: success }
+        on_failure:
+          put: github-status
+          no_get: true
+          inputs: [ repo ]
+          params: { context: 'build', state: failure }
+        on_error:
+          put: github-status
+          no_get: true
+          inputs: [ repo ]
+          params: { context: 'build', state: error }
+        on_abort:
+          put: github-status
+          no_get: true
+          inputs: [ repo ]
+          params: { context: 'build', state: error }
+
+      - task: test
+        privileged: true
+        params:
+          BUILD_ARG_ANSIBLE_VERSION: ((.:ansible-version))
+          TARGET: testing
+          UNPACK_ROOTFS: false
+        config:
+          platform: linux
+          image_resource:
+            type: registry-image
+            source:
+              repository: concourse/oci-build-task
+          inputs:
+            - name: repo
+              path: .
+          caches:
+            - path: cache
+          run:
+            path: build
+        on_success:
+          put: github-status
+          no_get: true
+          inputs: [ repo ]
+          params: { context: 'test', state: success }
+        on_failure:
+          put: github-status
+          no_get: true
+          inputs: [ repo ]
+          params: { context: 'test', state: failure }
+        on_error:
+          put: github-status
+          no_get: true
+          inputs: [ repo ]
+          params: { context: 'test', state: error }
+        on_abort:
+          put: github-status
+          no_get: true
+          inputs: [ repo ]
+          params: { context: 'test', state: error }
+
+      - task: tags
+        config:
+          platform: linux
+          image_resource:
+            type: registry-image
+            source:
+              repository: busybox
+          params:
+            ANSIBLE_VERSION: ((.:ansible-version))
+            ANSIBLE_MAJOR: ((.:ansible-major))
+            REPO_VERSION: ((.:repo-version))
+          inputs:
+            - name: repo
+          outputs:
+            - name: tags
+          run:
+            path: sh
+            args:
+              - -exc
+              - |
+                echo "ansible${ANSIBLE_MAJOR} ansible${ANSIBLE_VERSION} ${REPO_VERSION}-ansible${ANSIBLE_VERSION}-$(date +%Y%m%d)" > tags/tags
+
+      - put: concourse-ansible-playbook-resource
+        inputs: detect
+        params:
+          image: image/image.tar
+          additional_tags: tags/tags
+        on_success:
+          put: github-status
+          no_get: true
+          inputs: [ repo ]
+          params: { context: 'publish', state: success }
+        on_failure:
+          put: github-status
+          no_get: true
+          inputs: [ repo ]
+          params: { context: 'publish', state: failure }
+        on_error:
+          put: github-status
+          no_get: true
+          inputs: [ repo ]
+          params: { context: 'publish', state: error }
+        on_abort:
+          put: github-status
+          no_get: true
+          inputs: [ repo ]
+          params: { context: 'publish', state: error }

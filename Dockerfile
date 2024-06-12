@@ -1,4 +1,6 @@
-FROM alpine:latest as main
+FROM alpine:3 as main
+
+ARG ANSIBLE_VERSION
 
 RUN set -eux; \
     apk --update add bash openssh-client ruby git ruby-json python3 py3-pip openssl ca-certificates; \
@@ -11,7 +13,7 @@ RUN set -eux; \
       musl-dev \
       cargo; \
     pip3 install --upgrade pip cffi --break-system-packages; \
-    pip3 install ansible boto pywinrm --break-system-packages; \
+    pip3 install "ansible==$ANSIBLE_VERSION" boto pywinrm --break-system-packages; \
     apk del build-dependencies; \
     rm -rf /var/cache/apk/*; \
 # Remove PIP and Cargo cache
@@ -38,5 +40,13 @@ COPY . /resource/
 
 WORKDIR /resource
 RUN rspec
+
+FROM alpine:3 as print_latest_ansible_version
+
+RUN apk --update add --no-cache py3-pip
+
+COPY print_latest_ansible_version.sh /tools/
+WORKDIR /tools
+CMD ["./print_latest_ansible_version.sh"]
 
 FROM main
