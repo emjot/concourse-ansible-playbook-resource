@@ -2,6 +2,8 @@
 
 A [Concourse CI](https://concourse-ci.org) resource for running Ansible playbooks.
 
+[<img src="https://concourse.emjot.de/api/v1/teams/emjot/pipelines/ansible-resource/jobs/build-and-publish/badge">](https://concourse.emjot.de/teams/emjot/pipelines/ansible-resource)
+
 Fork of https://github.com/troykinsella/concourse-ansible-playbook-resource/.
 (Main reason for this fork is that we want to build it regularly to keep images and ansible versions up to date,
 which does not seem to happen for the original repo as of mid 2024. We will make a best effort to stay up to date
@@ -59,7 +61,7 @@ resource_types:
 - name: ansible-playbook
   type: docker-image
   source:
-    repository: troykinsella/concourse-ansible-playbook-resource
+    repository: emjotde/concourse-ansible-playbook-resource
     tag: latest
 
 resources:
