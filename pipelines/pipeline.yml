@@ -42,8 +42,8 @@ resources:
     source:
       repository: emjotde/concourse-ansible-playbook-resource
       tag: latest
-      username: ((docker.username))
-      password: ((docker.password))
+      username: ((docker/username))
+      password: ((docker/password))
 
 jobs:
   - name: build-and-publish
