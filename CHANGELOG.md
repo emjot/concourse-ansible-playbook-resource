@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.0.1
+
+* (internal/build) Adapt concourse CI pipeline secrets to new structure
+
 ## 3.0.0
 
 * Fork from https://github.com/troykinsella/concourse-ansible-playbook-resource (v2.2.3)
