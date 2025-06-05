@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.1.0
+
+* Fix alpine 3.22 compatibility (remove unnecessary ruby-json package from docker image)
+
 ## 3.0.1
 
 * (internal/build) Adapt concourse CI pipeline secrets to new structure
