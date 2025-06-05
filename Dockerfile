@@ -3,7 +3,7 @@ FROM alpine:3 as main
 ARG ANSIBLE_VERSION
 
 RUN set -eux; \
-    apk --update add bash openssh-client ruby git ruby-json python3 py3-pip openssl ca-certificates; \
+    apk --update add bash openssh-client ruby git python3 py3-pip openssl ca-certificates; \
     apk --update add --virtual \
       build-dependencies \
       build-base \
