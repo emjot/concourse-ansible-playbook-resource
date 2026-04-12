@@ -1,5 +1,7 @@
 # Changelog
 
+* Fix "FromAsCasing" warnings in Dockerfile
+
 ## 3.1.0
 
 * Fix alpine 3.22 compatibility (remove unnecessary ruby-json package from docker image)

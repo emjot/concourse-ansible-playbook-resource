@@ -1,4 +1,4 @@
-FROM alpine:3 as main
+FROM alpine:3 AS main
 
 ARG ANSIBLE_VERSION
 
@@ -27,7 +27,7 @@ RUN set -eux; \
 
 COPY assets/ /opt/resource/
 
-FROM main as testing
+FROM main AS testing
 
 RUN set -eux; \
     gem install rspec; \
@@ -41,7 +41,7 @@ COPY . /resource/
 WORKDIR /resource
 RUN rspec
 
-FROM alpine:3 as print_latest_ansible_version
+FROM alpine:3 AS print_latest_ansible_version
 
 RUN apk --update add --no-cache py3-pip
 
