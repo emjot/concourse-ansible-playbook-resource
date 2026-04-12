@@ -1,5 +1,7 @@
 # Changelog
 
+# 3.1.1
+
 * Fix "FromAsCasing" warnings in Dockerfile
 
 ## 3.1.0
