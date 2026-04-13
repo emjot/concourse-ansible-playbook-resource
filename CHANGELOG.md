@@ -1,8 +1,10 @@
 # Changelog
 
+* Fix: It's "registry-image" resource, not "resource-image"
+
 # 3.1.2
 
-* Fix: use "resource-image" instead of "docker-image" resource (fixes "failed to fetch manifest" (denied) problems)
+* Fix: Use "resource-image" instead of "docker-image" resource (fixes "failed to fetch manifest" (denied) problems)
 
 # 3.1.1
 

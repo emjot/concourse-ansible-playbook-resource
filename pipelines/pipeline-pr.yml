@@ -1,7 +1,7 @@
 # Pipeline for PRs
 resource_types:
   - name: pull-request
-    type: resource-image
+    type: registry-image
     source:
       repository: teliaoss/github-pr-resource
 
