@@ -1,5 +1,7 @@
 # Changelog
 
+* Fix: use "resource-image" instead of "docker-image" resource (fixes "failed to fetch manifest" (denied) problems)
+
 # 3.1.1
 
 * Fix "FromAsCasing" warnings in Dockerfile

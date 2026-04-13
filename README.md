@@ -59,7 +59,7 @@ which are pulled from during `ansible-galaxy install`.
 ```yaml
 resource_types:
 - name: ansible-playbook
-  type: docker-image
+  type: resource-image
   source:
     repository: emjotde/concourse-ansible-playbook-resource
     tag: latest

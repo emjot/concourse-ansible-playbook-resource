@@ -1,7 +1,7 @@
 # Pipeline for PRs
 resource_types:
   - name: pull-request
-    type: docker-image
+    type: resource-image
     source:
       repository: teliaoss/github-pr-resource
 
