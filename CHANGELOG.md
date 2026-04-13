@@ -1,5 +1,7 @@
 # Changelog
 
+# 3.1.3
+
 * Fix: It's "registry-image" resource, not "resource-image"
 
 # 3.1.2
