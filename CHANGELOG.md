@@ -1,5 +1,12 @@
 # Changelog
 
+# Unreleased
+
+* Fix: Put steps fail on Concourse >= 8.3 with "resource output version is
+  empty", even when the playbook succeeded. `out` used to emit an empty
+  version, which Concourse 8 no longer accepts; it now emits the UTC
+  timestamp of the run as version (e.g. `{"timestamp": "2026-10-28T00:18:34Z"}`).
+
 # 3.1.3
 
 * Fix: It's "registry-image" resource, not "resource-image"

@@ -10,4 +10,7 @@ trap "kill $SSH_AGENT_PID" 0
 
 $(dirname $0)/lib/commands/out.rb $1 <&0
 
-printf '{"version":{}}' >&3
+# Concourse >= 8 rejects empty versions, and fails the put step on them as of
+# 8.3. A playbook run has no inherent version, so (like the time resource)
+# emit the run's timestamp as a unique version for each successful put.
+printf '{"version":{"timestamp":"%s"}}' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >&3
