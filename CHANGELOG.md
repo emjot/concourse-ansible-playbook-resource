@@ -2,6 +2,8 @@
 
 # Unreleased
 
+# 3.2.0
+
 * Fix: Put steps fail on Concourse >= 8.3 with "resource output version is
   empty", even when the playbook succeeded. `out` used to emit an empty
   version, which Concourse 8 no longer accepts; it now emits the UTC
