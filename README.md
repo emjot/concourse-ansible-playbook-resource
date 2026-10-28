@@ -91,6 +91,10 @@ Prior to running `ansible-playbook`, if an `ansible.cfg` file is present in the
 command line options are managed by this resource. The result of this sanitization
 can be seen by setting `source.debug: true`.
 
+On success, the emitted version is the UTC timestamp of the run (e.g.
+`{"timestamp": "2026-10-28T00:18:34Z"}`), since a playbook run has no
+inherent version and Concourse does not accept empty versions.
+
 #### Parameters
 
 Most parameters map directly to `ansible-playbook` options. See the

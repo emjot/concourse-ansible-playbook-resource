@@ -11,7 +11,7 @@ describe "integration:output" do
     File.delete mockelton_out if File.exist? mockelton_out
   end
 
-  it "should return an empty version" do
+  it "should return a timestamp version" do
     stdin = {
         "source" => {
             "ssh_private_key" => "key"
@@ -25,6 +25,8 @@ describe "integration:output" do
     stdout, stderr, status = Open3.capture3("#{out_file} .", :stdin_data => stdin)
 
     expect(status.success?).to be true
-    expect(stdout).to eq("{\"version\":{}}")
+    expect(JSON.parse(stdout)).to match(
+      "version" => { "timestamp" => a_string_matching(/\A\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z\z/) }
+    )
   end
 end
